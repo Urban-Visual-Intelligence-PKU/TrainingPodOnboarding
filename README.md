@@ -45,3 +45,7 @@ Host tp-alice
 | `PIP_CACHE_DIR` | `/fsx/shared/pip` |
 | `UV_CACHE_DIR` | `/fsx/shared/uv` |
 | `TORCH_HOME` | `/fsx/shared/torch` |
+| `MODELSCOPE_CACHE` | `/fsx/shared/modelscope` |
+| `CONDA_PKGS_DIRS` | `/fsx/shared/conda/pkgs,/fsx/<姓名>/.cache/conda/pkgs` |
+
+Conda 按需安装。已缓存的包可从管理员维护的共享目录读取，新下载的包写到个人缓存。共享下载缓存只放允许所有获授权使用者访问的内容。Triton、CUDA、TorchInductor、FlashInfer 和 vLLM 的编译及自动调优缓存保留在各自的 Pod 或个人目录。
