@@ -26,11 +26,11 @@ Host tp-alice
 
 | 路径 | 放什么 | Pod 中是否能查看并读写 |
 | --- | --- | --- |
-| `/fsx/<姓名>` | 个人代码、项目虚拟环境、私有数据、实验日志和 checkpoint | 仅本人名下的 Pod 可查看和读写 |
-| `/fsx/shared/<姓名>` | 个人共享目录，用于发布希望在 Pod 之间共享的个人文件或产物，例如 `/fsx/shared/ruizhe` | 获授权的 Pod 可查看和读写，按目录 ACL 开放 |
-| `/fsx/shared/data/raw/<数据集>` | 已获准共享的原始下载数据，保留原始内容并记录来源、版本和许可 | 获授权的 Pod 可查看和读取，写入按发布目录 ACL 开放 |
-| `/fsx/shared/data/<项目名>/<数据集>/` | 已获准共享的项目处理产物，记录来源数据版本和处理方式 | 获授权的 Pod 可查看和读取，写入按项目目录 ACL 开放 |
-| `/fsx/shared/hub` | Hugging Face Hub 模型缓存，目录结构由 Hugging Face 工具管理 | 获授权的 Pod 可查看和读写，具体文件权限由缓存目录 ACL 决定 |
+| `/fsx/<姓名>` | 个人代码、项目虚拟环境、私有数据、实验日志和 checkpoint | 仅自己 Pod |
+| `/fsx/shared/<姓名>` | 个人共享目录，用于发布希望在 Pod 之间共享的个人文件或产物，例如 `/fsx/shared/ruizhe` | 全部 Pod |
+| `/fsx/shared/data/raw/<数据集>` | 已获准共享的原始下载数据，保留原始内容并记录来源、版本和许可 | 全部 Pod |
+| `/fsx/shared/data/<项目名>/<数据集>/` | 已获准共享的项目处理产物，记录来源数据版本和处理方式 | 全部 Pod |
+| `/fsx/shared/hub` | Hugging Face Hub 模型缓存，目录结构由 Hugging Face 工具管理 | 全部 Pod |
 
 请遵守以下存储规则。
 
