@@ -1,11 +1,20 @@
 # TrainingPod 用户指南
 
+也可以把本指南克隆到本机的 `~/Project`，供你和 AI Agent 查阅。
+
+```sh
+mkdir -p ~/Project
+git clone https://github.com/Urban-Visual-Intelligence-PKU/TrainingPodOnboarding.git ~/Project/TrainingPodOnboarding
+```
+
 ## 第一步：联系管理员创建个人 Pod
+
+在自己的 GitHub 账号打开 **Settings → SSH and GPG keys → New SSH key**，将本机的 OpenSSH 公钥（通常是 `~/.ssh/id_ed25519.pub`）添加为 **Authentication Key**。私钥留在自己电脑上。
 
 把以下资料发给管理员。
 
 - 你的姓名或账号，用于开通个人持久目录 `/fsx/<姓名>` 和个人共享目录 `/fsx/shared/<姓名>`。
-- 你的 OpenSSH 公钥（通常是本机的 `~/.ssh/id_ed25519.pub`）。私钥留在自己电脑上。
+- 你的 GitHub 用户名（个人主页地址中的用户名）。管理员会从这个账号读取 SSH 公钥。
 - 你的 SSH 登录来源 IP 或网段，用于开通入口权限。
 - 出网方式。选择**直连**时，Pod 经宿主机直接出网。选择 **AnyTLS 代理**时，复制 [Kato 配置模板](https://github.com/Urban-Visual-Intelligence-PKU/Lightweight-Proxy/blob/main/config/template.yaml)，将副本命名为 `<姓名>.yaml`（姓名用拼音），按文件注释填写，再通过私密渠道把整个 YAML 文件交给管理员。文件包含代理凭据，请勿提交到 Git 或发到群聊。
 
@@ -18,7 +27,7 @@ Host <自定义名称>
     Port <管理员提供>
 ```
 
-将配置添加到你本机的 `~/.ssh/config`，按管理员交付的主机公钥核验服务器身份，然后运行 `ssh <自定义名称>`。这里的 `root` 是 Pod 内的账号。SSH 登录使用提交的公钥，管理员不会发放 SSH 登录密码。如果本机 SSH 私钥设置过口令，客户端提示时输入你自己设置的口令。
+将配置添加到你本机的 `~/.ssh/config`，按管理员交付的主机公钥核验服务器身份，然后运行 `ssh <自定义名称>`。这里的 `root` 是 Pod 内的账号。SSH 登录使用与你在 GitHub 添加的公钥配对的本机私钥。如果本机 SSH 私钥设置过口令，客户端提示时输入你自己设置的口令。
 
 ## 第二步：迁移数据
 
@@ -30,23 +39,26 @@ Host <自定义名称>
 | `/fsx/shared/<姓名>` | 个人共享目录，用于发布希望在 Pod 之间共享的个人文件或产物，例如 `/fsx/shared/ruizhe` | 全部 Pod |
 | `/fsx/shared/data/raw/<数据集>` | 已获准共享的原始下载数据，保留原始内容并记录来源、版本和许可 | 全部 Pod |
 | `/fsx/shared/data/<项目名>/<数据集>/` | 已获准共享的项目处理产物，记录来源数据版本和处理方式 | 全部 Pod |
-| `/fsx/shared/hub` | Hugging Face Hub 模型缓存，目录结构由 Hugging Face 工具管理 | 全部 Pod |
+| `/fsx/shared/models` | Hugging Face 和 ModelScope 的 Hub 缓存，以及从 Hugging Face 以外的来源下载的公开 checkpoint | 全部 Pod |
+| `/fsx/shared/data` | Hugging Face 和 ModelScope 的 Datasets 缓存 | 全部 Pod |
 
 请遵守以下存储规则。
 
 - 需要跨 Pod 重建保留的文件放在 `/fsx`。登录后的 `/root` 属于当前 Pod 的系统盘。宿主机的 `/home/<账号>` 需要在宿主机侧访问。
 - 容器内可访问自己的 `/fsx/<姓名>` 和公共的 `/fsx/shared`。宿主机和容器访问的是同一份数据，实际访问权限由宿主机的 ACL 和组权限决定。个人共享目录以姓名归档，按共享 ACL 开放给获授权的 Pod 读写。发布共享数据集时，按表中的 `raw` 或项目路径归档。
 - SSH 私钥、令牌、`.env` 和未获准共享的数据留在个人目录。更新别人正在使用的共享数据集前，先协调版本和切换时间。
+- 手动下载的公开 checkpoint 按模型归档到 `/fsx/shared/models/<模型名>/`。通过 Hugging Face 或 ModelScope SDK 下载时，由 SDK 管理缓存目录结构。
 - 项目依赖用项目自己的 `.venv` 和锁文件管理。Pod 已预设共享下载缓存。
 
 | 环境变量 | 缓存路径 |
 | --- | --- |
-| `HF_HUB_CACHE` | `/fsx/shared/hub` |
-| `HF_DATASETS_CACHE` | `/fsx/shared/huggingface/datasets` |
+| `HF_HUB_CACHE` | `/fsx/shared/models` |
+| `HF_DATASETS_CACHE` | `/fsx/shared/data` |
 | `PIP_CACHE_DIR` | `/fsx/shared/pip` |
 | `UV_CACHE_DIR` | `/fsx/shared/uv` |
 | `TORCH_HOME` | `/fsx/shared/torch` |
-| `MODELSCOPE_CACHE` | `/fsx/shared/modelscope` |
+| `MODELSCOPE_CACHE` | `/fsx/shared/models` |
+| `MS_DATASETS_CACHE` | `/fsx/shared/data` |
 | `CONDA_PKGS_DIRS` | `/fsx/shared/conda/pkgs,/fsx/<姓名>/.cache/conda/pkgs` |
 
 Conda 按需安装。已缓存的包可从管理员维护的共享目录读取，新下载的包写到个人缓存。共享下载缓存只放允许所有获授权使用者访问的内容。Triton、CUDA、TorchInductor、FlashInfer 和 vLLM 的编译及自动调优缓存保留在各自的 Pod 或个人目录。
