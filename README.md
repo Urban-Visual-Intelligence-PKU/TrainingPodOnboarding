@@ -7,35 +7,21 @@ mkdir -p ~/Project
 git clone https://github.com/Urban-Visual-Intelligence-PKU/TrainingPodOnboarding.git ~/Project/TrainingPodOnboarding
 ```
 
-## 第一步：联系管理员创建个人 Pod
+## 申请 Pod 并登录
 
-在自己的 GitHub 账号打开 **Settings → SSH and GPG keys → New SSH key**，将本机的 OpenSSH 公钥（通常是 `~/.ssh/id_ed25519.pub`）添加为 **Authentication Key**。私钥留在自己电脑上。
+让你的 AI Agent 先读取 [TrainingPod 申请、登录和数据迁移 Skill](skills/trainingpod-data-migration/SKILL.md)。它会收集个人目录名、GitHub 用户名和出网方式，生成可直接复制给管理员的三行申请。请在 GitHub 添加本机 SSH 公钥。选择 AnyTLS 代理时，按 Skill 的说明通过私密渠道交付 profile。
 
-把以下资料发给管理员。
+同一用户可申请多个 Pod。Pod ID 为 `<个人目录名>-<index>`，例如 `huyuan-1`、`huyuan-2`。旧式实例计作索引 1。追加时沿用个人目录名，另发一句「请为这个已有个人目录追加一个 Pod」。
 
-- 你的姓名或账号，用于开通个人持久目录 `/fsx/<姓名>` 和个人共享目录 `/fsx/shared/<姓名>`。
-- 你的 GitHub 用户名（个人主页地址中的用户名）。管理员会从这个账号读取 SSH 公钥。
-- 你的 SSH 登录来源 IP 或网段，用于开通入口权限。
-- 出网方式。选择**直连**时，Pod 经宿主机直接出网。选择 **AnyTLS 代理**时，复制 [Kato 配置模板](https://github.com/Urban-Visual-Intelligence-PKU/Lightweight-Proxy/blob/main/config/template.yaml)，将副本命名为 `<姓名>.yaml`（姓名用拼音），按文件注释填写，再通过私密渠道把整个 YAML 文件交给管理员。文件包含代理凭据，请勿提交到 Git 或发到群聊。
+管理员回复一行登录命令，例如 `ssh -p 22226 root@192.168.10.2`。把该行交给 AI Agent，按 Skill 在本机 `~/.ssh/config` 添加自定义别名，在首次登录前从可信渠道单独核验主机密钥。优先用 Pod ID 做别名，只知道端口时可用 `huyuan-22226`。每个 Pod 的 SSH 端口和系统盘独立。
 
-管理员会交付登录命令、SSH 配置和用于核对服务器身份的主机公钥。宿主机地址和登录用户是固定的。请将 `<自定义名称>` 替换为你选的 SSH 别名，将 `<管理员提供>` 替换为实际入口端口。
+## 迁移数据
 
-```sshconfig
-Host <自定义名称>
-    HostName 192.168.10.2
-    User root
-    Port <管理员提供>
-```
-
-将配置添加到你本机的 `~/.ssh/config`，按管理员交付的主机公钥核验服务器身份，然后运行 `ssh <自定义名称>`。这里的 `root` 是 Pod 内的账号。SSH 登录使用与你在 GitHub 添加的公钥配对的本机私钥。如果本机 SSH 私钥设置过口令，客户端提示时输入你自己设置的口令。
-
-## 第二步：迁移数据
-
-**先让你的 AI Agent 读取并遵循 [TrainingPod 数据迁移 Skill](skills/trainingpod-data-migration/SKILL.md)，再告诉它源目录、你的个人目录名，以及哪些内容可以共享。**
+登录后，告诉 AI Agent 源目录和哪些内容可以共享，按同一个 Skill 迁移。追加 Pod 后，已存入个人持久目录的数据可直接使用。
 
 | 路径 | 放什么 | Pod 中是否能查看并读写 |
 | --- | --- | --- |
-| `/fsx/<姓名>` | 个人代码、项目虚拟环境、私有数据、实验日志和 checkpoint | 仅自己 Pod |
+| `/fsx/<个人目录名>` | 个人代码、项目虚拟环境、私有数据、实验日志和 checkpoint | 同一用户的所有 Pod |
 | `/fsx/shared/<姓名>` | 个人共享目录，用于发布希望在 Pod 之间共享的个人文件或产物，例如 `/fsx/shared/ruizhe` | 全部 Pod |
 | `/fsx/shared/data/raw/<数据集>` | 已获准共享的原始下载数据，保留原始内容并记录来源、版本和许可 | 全部 Pod |
 | `/fsx/shared/data/<项目名>/<数据集>/` | 已获准共享的项目处理产物，记录来源数据版本和处理方式 | 全部 Pod |
@@ -44,8 +30,9 @@ Host <自定义名称>
 
 请遵守以下存储规则。
 
-- 需要跨 Pod 重建保留的文件放在 `/fsx`。登录后的 `/root` 属于当前 Pod 的系统盘。宿主机的 `/home/<账号>` 需要在宿主机侧访问。
-- 容器内可访问自己的 `/fsx/<姓名>` 和公共的 `/fsx/shared`。宿主机和容器访问的是同一份数据，实际访问权限由宿主机的 ACL 和组权限决定。个人共享目录以姓名归档，按共享 ACL 开放给获授权的 Pod 读写。发布共享数据集时，按表中的 `raw` 或项目路径归档。
+- 大型数据、checkpoint、训练输出和需要跨 Pod 重建保留的文件直接写到 `/fsx`。`/root`、`/tmp` 属于当前 Pod 的系统盘，与 `/fsx` 之间的 `mv` 仍会跨文件系统复制后删除源。宿主机的 `/home/<账号>` 需要在宿主机侧访问。
+- 新 Pod 在个人目录和 `/fsx/shared` 之间 `mv` 时直接改名，几乎瞬间完成，保留原属主、权限和 ACL。发布后请从获授权的 Pod 核对接收方可读。其他私有目录名可见，内容由 ACL 隔离。旧 Pod 在这两个目录之间 `mv` 仍会复制后删除源。
+- 跨挂载 `mv` 如果只出现 `preserving permissions ... Invalid argument`，文件已移动，提示的是 ACL 保留失败。核对目标存在、源已移走，并检查目标权限。也可用 `rsync -rltH` 复制，核对内容后再删除源。`cp -a` 遇到未映射的 ACL 而失败时，可用 `cp -a --no-preserve=mode,ownership` 跳过原权限、ACL 和属主的保留。
 - SSH 私钥、令牌、`.env` 和未获准共享的数据留在个人目录。更新别人正在使用的共享数据集前，先协调版本和切换时间。
 - 手动下载的公开 checkpoint 按模型归档到 `/fsx/shared/models/<模型名>/`。通过 Hugging Face 或 ModelScope SDK 下载时，由 SDK 管理缓存目录结构。
 - 项目依赖用项目自己的 `.venv` 和锁文件管理。Pod 已预设共享下载缓存。
